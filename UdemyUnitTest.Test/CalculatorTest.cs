@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Moq;
 using UdemyUnitTest.APP;
 using Xunit;
 
@@ -10,11 +11,15 @@ namespace UdemyUnitTest.Test
 {
     public class CalculatorTest
     {
-        public Calculator calculator  { get; set; }
+        public Calculator calculator { get; set; }
+        public Mock<ICalculatorService> myMock { get; set; }
 
         public CalculatorTest()
         {
-            this.calculator = new Calculator();
+            myMock = new Mock<ICalculatorService>();
+            this.calculator = new Calculator(myMock.Object); // Taklit
+            //  calculator = new Calculator(new CalculatorService());
+
         }
 
 
@@ -148,33 +153,37 @@ namespace UdemyUnitTest.Test
             Assert.Equal<int>(2, 2);
         }
 
-
         //[Theory]
         //[InlineData(2,5,7)]
         public void AddTest13(int a, int b, int expectedTotal)
         {
-           
 
-            var actualData = calculator.Add(a, b);
 
-            Assert.Equal(expectedTotal,actualData);
-
-        }
-        
-
-        [Theory]
-        [InlineData(2,5,7)] //İsimlendirme kuralı best practice
-        public void Add_SimpleValues_ReturnTotalValue(int a, int b, int expectedTotal)
-        {
             var actualData = calculator.Add(a, b);
 
             Assert.Equal(expectedTotal, actualData);
 
         }
 
+
         [Theory]
-        [InlineData(0, 5, 0)] 
-        [InlineData(10, 0, 0)] 
+        [InlineData(2, 5, 7)] //İsimlendirme kuralı best practice
+        public void Add_SimpleValues_ReturnTotalValue(int a, int b, int expectedTotal)
+        {
+
+            myMock.Setup(x => x.Add(a, b)).Returns(expectedTotal);
+
+            var actualData = calculator.Add(a, b);
+
+            Assert.Equal(expectedTotal, actualData);
+
+            myMock.Verify(x => x.Add(a, b), Times.Once);
+
+        }
+
+        //[Theory]
+        //[InlineData(0, 5, 0)]
+        //[InlineData(10, 0, 0)]
         public void Add_ZeroValues_ReturnZeroValue(int a, int b, int expectedTotal)
         {
             var actualData = calculator.Add(a, b);
@@ -184,6 +193,36 @@ namespace UdemyUnitTest.Test
         }
 
 
+        [Theory]
+        [InlineData(3, 5, 15)]
+        public void Multip_SimpleValues_ReturnMultipValue(int a, int b, int expectedValue)
+        {
+            int actualMultip =0;
+
+            myMock.Setup(x => x.Multip(It.IsAny<int>(), It.IsAny<int>()))
+                .Callback<int, int>((x, y) => actualMultip = x * y);
+
+            calculator.Multip(a, b);
+
+            Assert.Equal(expectedValue,actualMultip );
+            
+            calculator.Multip(5, 20);
+
+            Assert.Equal(100,actualMultip);
+
+        }
+
+
+        [Theory]
+        [InlineData(0, 5, 10)]
+        public void Multip_ZeroValue_ReturnsException(int a, int b, int expectedTotal)
+        {
+            myMock.Setup(x => x.Multip(a, b)).Throws(new Exception("a=0 olamaz"));
+
+            Exception exception = Assert.Throws<Exception>(() => calculator.Multip(a, b));
+            Assert.Equal("a=0 olamaz", exception.Message);
+
+        }
 
 
     }
